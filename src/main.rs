@@ -23,13 +23,18 @@ fn main() -> Fallible<()> {
     let source: String;
     let target: String;
     {
-        let (src,tar) = target_outputs(outputs?);
+        let (src,tar, valid) = target_outputs(outputs?);
+
+        if !valid {
+            return Ok(());
+        }
+
         source = src.unwrap();
         target = tar.unwrap();
     }
 
     let workspaces = con.get_workspaces().unwrap();
-    let currentWorkspace = workspaces.iter().enumerate().find(|x| x.1.focused).unwrap().1;
+    let current_workspace = workspaces.iter().enumerate().find(|x| x.1.focused).unwrap().1;
 
 
     // start wl-mirror, then wait until it is visible
@@ -47,7 +52,7 @@ fn main() -> Fallible<()> {
 
     con.run_command("[app_id=".to_owned() + MIRROR_APPID + "] move to workspace " + MIRROR_WORKSPACE + ",fullscreen enable").expect("failed to move wl-mirror to workspace");
     con.run_command("[workspace=".to_owned() + MIRROR_WORKSPACE + "] move workspace to " + target.as_str()).expect("failed to move workspace to output");
-    con.run_command("[workspace=".to_owned() + currentWorkspace.name.as_str() + "] focus").expect("failed to focus workspace");
+    con.run_command("[workspace=".to_owned() + current_workspace.name.as_str() + "] focus").expect("failed to focus workspace");
 
     Ok(())
 }
@@ -63,11 +68,13 @@ fn kill_active_mirrors() -> bool {
     return false
 }
 
-fn target_outputs(outputs: Vec<Output>) -> (Option<String>, Option<String>) {
+fn target_outputs(outputs: Vec<Output>) -> (Option<String>, Option<String>, bool) {
     let mut source: Option<String> = None;
     let mut target: Option<String> = None;
 
-     if outputs.len() >= 2 {
+    let mut valid = false;
+    if outputs.len() >= 2 {
+        valid = true;
         for output in outputs {
             if output.name == PREF_SOURCE {
                 source = Some(output.name);
@@ -86,5 +93,5 @@ fn target_outputs(outputs: Vec<Output>) -> (Option<String>, Option<String>) {
             }
         }
     }
-    return (source, target);
+    return (source, target, valid);
 }
