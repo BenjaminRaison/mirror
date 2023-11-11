@@ -2,27 +2,25 @@ use swayipc::{Connection,Fallible,EventType,WindowChange,Event,Output};
 use std::process::Command;
 use sysinfo::{ProcessExt,SystemExt};
 
-
+const MIRROR_COMMAND: &str = "wl-mirror";
 const MIRROR_APPID: &str = "at.yrlf.wl_mirror";
 const MIRROR_WORKSPACE: &str = "mirror";
+
 const PREF_SOURCE: &str = "eDP-1";
 const PREF_TARGET: &str = "HDMI-1";
 
 fn main() -> Fallible<()> {
-    let mut con = Connection::new().unwrap();
-
-    {
-        if kill_active_mirrors() {
-            return Ok(());
-        }
+    if kill_active_mirrors() {
+        return Ok(());
     }
 
-    let outputs = con.get_outputs();
 
+    let mut con = Connection::new().unwrap();
 
     let source: String;
     let target: String;
     {
+        let outputs = con.get_outputs();
         let (src,tar, valid) = target_outputs(outputs?);
 
         if !valid {
@@ -38,7 +36,7 @@ fn main() -> Fallible<()> {
 
 
     // start wl-mirror, then wait until it is visible
-    Command::new("wl-mirror").arg(source).spawn().expect("failed to start wl-mirror");
+    Command::new(MIRROR_COMMAND).arg(source).spawn().expect("failed to start mirroring");
     for event in Connection::new()?.subscribe([EventType::Window])? {
         match event? {
             Event::Window(w) => {
@@ -60,7 +58,7 @@ fn main() -> Fallible<()> {
 fn kill_active_mirrors() -> bool {
     let s = sysinfo::System::new_all();
     for (_,process) in s.processes() {
-        if process.name() == "wl-mirror" {
+        if process.name() == MIRROR_COMMAND {
             process.kill();
             return true
         }
