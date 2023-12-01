@@ -1,6 +1,7 @@
 use swayipc::{Connection,Fallible,EventType,WindowChange,Event,Output};
 use std::process::Command;
-use sysinfo::{ProcessExt,SystemExt};
+use std::process::Stdio;
+
 
 const MIRROR_COMMAND: &str = "wl-mirror";
 const MIRROR_APPID: &str = "at.yrlf.wl_mirror";
@@ -56,14 +57,12 @@ fn main() -> Fallible<()> {
 }
 
 fn kill_active_mirrors() -> bool {
-    let s = sysinfo::System::new_all();
-    for (_,process) in s.processes() {
-        if process.name() == MIRROR_COMMAND {
-            process.kill();
-            return true
-        }
-    }
-    return false
+    return Command::new("killall")
+        .arg(MIRROR_COMMAND)
+        .stderr(Stdio::null())
+        .status()
+        .expect("failed to execute killall")
+        .success();
 }
 
 fn target_outputs(outputs: Vec<Output>) -> (Option<String>, Option<String>, bool) {
